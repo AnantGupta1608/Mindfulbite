@@ -1,1 +1,0 @@
-This is An AI Powered Calorie Tracker
