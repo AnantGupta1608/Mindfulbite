@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindfulBite - Food Calorie Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🍎 MindfulBite</h1>
+            <p>Eat with awareness, one snap at a time.</p>
+        </header>
+
+        <section class="upload-section">
+            <div class="upload-area" id="uploadArea">
+                <span class="upload-icon">📸</span>
+                <div class="upload-text">Upload or Capture Food Image</div>
+                <div class="upload-subtext">Drag and drop an image here, or use the buttons below</div>
+                
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="openCamera()">
+                        📷 Take Photo
+                    </button>
+                    <button class="btn btn-secondary" onclick="openFileDialog()">
+                        📁 Upload Image
+                    </button>
+                </div>
+
+                <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
+            </div>
+
+            <div class="preview-section">
+                <img id="previewImage" class="preview-image" alt="Food preview">
+            </div>
+
+            <div class="loading" id="loadingSection">
+                <div class="progress-container">
+                    <div class="progress-step" id="step1">
+                        <div class="step-icon">📤</div>
+                        <div class="step-text">Uploading image...</div>
+                    </div>
+                    <div class="progress-step" id="step2">
+                        <div class="step-icon">🤖</div>
+                        <div class="step-text">AI analyzing food...</div>
+                    </div>
+                    <div class="progress-step" id="step3">
+                        <div class="step-icon">📊</div>
+                        <div class="step-text">Calculating nutrition...</div>
+                    </div>
+                    <div class="overall-progress">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="results-section" id="resultsSection">
+            <div class="results-grid" id="resultsGrid">
+                <!-- Results will be populated here -->
+            </div>
+            <div style="text-align: center;">
+                <button class="clear-btn" onclick="clearResults()">
+                    🔄 Analyze Another Image
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
