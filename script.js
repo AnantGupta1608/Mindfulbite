@@ -232,15 +232,8 @@ async function uploadToImgBB(imageDataUrl) {
 }
 
 // Analyze using CONFIG.GROQ_API_KEY
-// ...existing code...
 async function analyzeCalories(imageUrl) {
     try {
-        // Check if API key is configured
-        if (!window.CONFIG || !window.CONFIG.GROQ_API_KEY || window.CONFIG.GROQ_API_KEY === 'YOUR_GROQ_API_KEY_HERE') {
-            console.log('Groq API key not configured, using simulation');
-            return await simulateCalorieAPI();
-        }
-
         console.log('Calling Groq API with image URL:', imageUrl);
 
         // Correct request format (multimodal input)
@@ -300,8 +293,6 @@ async function analyzeCalories(imageUrl) {
         return parseGroqResponse(data);
     } catch (error) {
         console.error('Error calling Groq API:', error);
-        console.log('Falling back to simulation...');
-        return await simulateCalorieAPI();
     }
 }
 
@@ -309,10 +300,6 @@ async function analyzeCalories(imageUrl) {
 // Check available Groq models
 async function checkAvailableModels() {
     try {
-        if (!window.CONFIG || !window.CONFIG.GROQ_API_KEY || window.CONFIG.GROQ_API_KEY === 'YOUR_GROQ_API_KEY_HERE') {
-            console.log('No Groq API key configured for model checking');
-            return [];
-        }
 
         const response = await fetch('https://api.groq.com/openai/v1/models', {
             method: 'GET',
@@ -391,11 +378,7 @@ async function tryAlternativeModel(imageUrl) {
         }
     }
     
-    // If all models fail, use simulation
-    console.log('All models failed, using simulation');
-    throw new Error('All alternative models failed');
 }
-
 // Parse the response from Groq API
 function parseGroqResponse(data) {
     try {
@@ -439,7 +422,7 @@ function parseGroqResponse(data) {
         return {
             items: [
                 {
-                    item_name: "Food Item (Analysis Failed)",
+                    item_name: "API ERROR",
                     total_calories: 200,
                     total_protein: 10,
                     total_carbs: 25,
@@ -450,74 +433,6 @@ function parseGroqResponse(data) {
     }
 }
 
-// Fallback simulation when API fails
-async function simulateCalorieAPI() {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    console.log('🎭 Using simulated data (API not available)');
-    
-    // Return sample data for demonstration with varied realistic values
-    const sampleFoods = [
-        {
-            item_name: "Mixed Green Salad",
-            total_calories: 45,
-            total_protein: 3,
-            total_carbs: 8,
-            total_fats: 1.5
-        },
-        {
-            item_name: "Grilled Chicken Breast",
-            total_calories: 185,
-            total_protein: 35,
-            total_carbs: 0,
-            total_fats: 4
-        },
-        {
-            item_name: "Steamed Rice",
-            total_calories: 130,
-            total_protein: 3,
-            total_carbs: 28,
-            total_fats: 0.3
-        },
-        {
-            item_name: "Fresh Apple",
-            total_calories: 95,
-            total_protein: 0.5,
-            total_carbs: 25,
-            total_fats: 0.3
-        },
-        {
-            item_name: "Whole Wheat Bread",
-            total_calories: 80,
-            total_protein: 4,
-            total_carbs: 14,
-            total_fats: 1.1
-        }
-    ];
-    
-    // Randomly select 1-3 items
-    const numItems = Math.floor(Math.random() * 3) + 1;
-    const selectedItems = [];
-    
-    for (let i = 0; i < numItems; i++) {
-        const randomItem = sampleFoods[Math.floor(Math.random() * sampleFoods.length)];
-        selectedItems.push({
-            ...randomItem,
-            // Add some variation to make it more realistic
-            total_calories: Math.round(randomItem.total_calories * (0.8 + Math.random() * 0.4)),
-            total_protein: Math.round(randomItem.total_protein * (0.8 + Math.random() * 0.4) * 10) / 10,
-            total_carbs: Math.round(randomItem.total_carbs * (0.8 + Math.random() * 0.4) * 10) / 10,
-            total_fats: Math.round(randomItem.total_fats * (0.8 + Math.random() * 0.4) * 10) / 10
-        });
-    }
-    
-    return {
-        items: selectedItems
-    };
-}
-
-// Display the results in cards
 function displayResults(result) {
     const resultsGrid = document.getElementById('resultsGrid');
     if (!resultsGrid) return;
@@ -529,9 +444,9 @@ function displayResults(result) {
             <div class="calorie-card">
                 <div class="card-header">
                     <span class="food-icon">❓</span>
-                    <span class="food-name">No Food Items Detected</span>
+                    <span class="food-name">❌No Food Items Detected</span>
                 </div>
-                <p>Sorry, we couldn't identify any food items in your image. Please try with a clearer image.</p>
+                <h style="color: #000; font-weight: 500;">We couldn't identify any food items in your image.</h>
             </div>
         `;
         return;
