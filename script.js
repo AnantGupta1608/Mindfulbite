@@ -456,18 +456,6 @@ function displayNoFoodDetected() {
             <div class="no-food-content">
                 <div class="no-food-icon">🍽️</div>
                 <p>We couldn't identify any food items in your image.</p>
-                <div class="suggestions">
-                    <h4>Tips for better results:</h4>
-                    <ul>
-                        <li>Make sure the food is clearly visible</li>
-                        <li>Use good lighting</li>
-                        <li>Take the photo from above or at an angle</li>
-                        <li>Ensure the image is not blurry</li>
-                    </ul>
-                </div>
-                <button onclick="clearResults()" class="retry-button">
-                    📸 Try Another Image
-                </button>
             </div>
         </div>
     `;
