@@ -450,12 +450,11 @@ function displayNoFoodDetected() {
     resultsGrid.innerHTML = `
         <div class="calorie-card no-food-card">
             <div class="card-header">
-                <span class="food-icon">🔍</span>
+                <span class="food-icon">❌</span>
                 <span class="food-name">No Food Detected</span>
             </div>
             <div class="no-food-content">
-                <div class="no-food-icon">🍽️</div>
-                <p>We couldn't identify any food items in your image.</p>
+                <h style="color: #000;">We couldn't identify any food items in your image.</h>
             </div>
         </div>
     `;
