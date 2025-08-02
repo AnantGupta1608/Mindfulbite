@@ -132,6 +132,11 @@ async function analyzeImage() {
     updateProgress(0, 1);
 
     try {
+        // Check if API keys are configured
+        if (!window.CONFIG || !window.CONFIG.GROQ_API_KEY || window.CONFIG.GROQ_API_KEY === 'YOUR_GROQ_API_KEY_HERE') {
+            throw new Error('API keys not configured');
+        }
+
         updateProgress(33, 1);
         const imageUrl = await uploadToImgBB(currentImageData);
 
@@ -145,7 +150,10 @@ async function analyzeImage() {
         resultsSection.style.display = 'block';
     } catch (error) {
         console.error('Error analyzing image:', error);
-        alert('Sorry, there was an error analyzing your image. Please try again.');
+        
+        // Show no food detected message instead of error
+        displayNoFoodDetected();
+        resultsSection.style.display = 'block';
     } finally {
         loadingSection.style.display = 'none';
     }
@@ -232,18 +240,16 @@ async function uploadToImgBB(imageDataUrl) {
 }
 
 // Analyze using CONFIG.GROQ_API_KEY
-// ...existing code...
 async function analyzeCalories(imageUrl) {
     try {
         // Check if API key is configured
         if (!window.CONFIG || !window.CONFIG.GROQ_API_KEY || window.CONFIG.GROQ_API_KEY === 'YOUR_GROQ_API_KEY_HERE') {
-            console.log('Groq API key not configured, using simulation');
-            return await simulateCalorieAPI();
+            throw new Error('Groq API key not configured');
         }
 
         console.log('Calling Groq API with image URL:', imageUrl);
 
-        // Correct request format (multimodal input)
+        // Enhanced prompt for better food detection
         const requestBody = {
             model: 'meta-llama/llama-4-maverick-17b-128e-instruct',
             messages: [
@@ -252,9 +258,11 @@ async function analyzeCalories(imageUrl) {
                     content: [
                         {
                             type: 'text',
-                            text: "Analyze this food image and identify all food items with nutritional values in JSON:\n" +
-                                  "{\"items\":[{\"item_name\":\"food name\", \"total_calories\":number, \"total_protein\":number, \"total_carbs\":number, \"total_fats\":number}]}\n" +
-                                  "Provide realistic numbers only."
+                            text: "Analyze this image carefully. If you can see any food items, identify them and provide nutritional values in JSON format:\n" +
+                                  "{\"has_food\":true, \"items\":[{\"item_name\":\"food name\", \"total_calories\":number, \"total_protein\":number, \"total_carbs\":number, \"total_fats\":number}]}\n\n" +
+                                  "If there is NO food visible in the image, respond with:\n" +
+                                  "{\"has_food\":false, \"items\":[]}\n\n" +
+                                  "Only identify actual food items that are clearly visible. Do not guess or assume."
                         },
                         {
                             type: 'image_url',
@@ -263,7 +271,7 @@ async function analyzeCalories(imageUrl) {
                     ]
                 }
             ],
-            temperature: 0.3,
+            temperature: 0.1,
             max_tokens: 1024,
             top_p: 0.9,
             stream: false
@@ -300,11 +308,10 @@ async function analyzeCalories(imageUrl) {
         return parseGroqResponse(data);
     } catch (error) {
         console.error('Error calling Groq API:', error);
-        console.log('Falling back to simulation...');
-        return await simulateCalorieAPI();
+        // Don't fall back to simulation, throw error instead
+        throw error;
     }
 }
-
 
 // Check available Groq models
 async function checkAvailableModels() {
@@ -354,7 +361,7 @@ async function tryAlternativeModel(imageUrl) {
                         content: [
                             {
                                 type: 'text',
-                                text: "Analyze this food image and return nutritional information in JSON format: {\"items\":[{\"item_name\":\"food name\", \"total_calories\":number, \"total_protein\":number, \"total_carbs\":number, \"total_fats\":number}]}"
+                                text: "Analyze this image carefully. If you can see any food items, provide nutritional information in JSON format: {\"has_food\":true, \"items\":[{\"item_name\":\"food name\", \"total_calories\":number, \"total_protein\":number, \"total_carbs\":number, \"total_fats\":number}]}. If there is NO food visible, respond with: {\"has_food\":false, \"items\":[]}"
                             },
                             {
                                 type: 'image_url',
@@ -364,7 +371,7 @@ async function tryAlternativeModel(imageUrl) {
                     }
                 ],
                 model: model,
-                temperature: 0.3,
+                temperature: 0.1,
                 max_completion_tokens: 1024,
                 response_format: { type: 'json_object' }
             };
@@ -391,8 +398,7 @@ async function tryAlternativeModel(imageUrl) {
         }
     }
     
-    // If all models fail, use simulation
-    console.log('All models failed, using simulation');
+    // If all models fail, throw error instead of using simulation
     throw new Error('All alternative models failed');
 }
 
@@ -411,110 +417,60 @@ function parseGroqResponse(data) {
                 const jsonStr = jsonMatch[0];
                 const parsedData = JSON.parse(jsonStr);
                 
-                // Validate the structure
-                if (parsedData.items && Array.isArray(parsedData.items)) {
-                    console.log('Successfully parsed response:', parsedData);
-                    return parsedData;
+                // Check if the response indicates no food
+                if (parsedData.has_food === false || (parsedData.items && parsedData.items.length === 0)) {
+                    console.log('No food detected in image');
+                    return { has_food: false, items: [] };
+                }
+                
+                // Validate the structure for food items
+                if (parsedData.items && Array.isArray(parsedData.items) && parsedData.items.length > 0) {
+                    console.log('Successfully parsed response with food items:', parsedData);
+                    return { has_food: true, ...parsedData };
                 }
             }
             
-            // If we can't parse as JSON, try to create a simple response
-            console.log('Could not parse as JSON, creating fallback response');
-            return {
-                items: [
-                    {
-                        item_name: "Detected Food Item",
-                        total_calories: 200,
-                        total_protein: 10,
-                        total_carbs: 25,
-                        total_fats: 8
-                    }
-                ]
-            };
+            // If we can't parse properly, assume no food detected
+            console.log('Could not parse response properly, assuming no food detected');
+            return { has_food: false, items: [] };
         }
         throw new Error('Invalid response structure');
     } catch (error) {
         console.error('Error parsing Groq response:', error);
-        console.log('Using fallback response due to parsing error');
-        return {
-            items: [
-                {
-                    item_name: "Food Item (Analysis Failed)",
-                    total_calories: 200,
-                    total_protein: 10,
-                    total_carbs: 25,
-                    total_fats: 8
-                }
-            ]
-        };
+        // Return no food detected instead of fallback
+        return { has_food: false, items: [] };
     }
 }
 
-// Fallback simulation when API fails
-async function simulateCalorieAPI() {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+// Display no food detected message
+function displayNoFoodDetected() {
+    const resultsGrid = document.getElementById('resultsGrid');
+    if (!resultsGrid) return;
     
-    console.log('🎭 Using simulated data (API not available)');
-    
-    // Return sample data for demonstration with varied realistic values
-    const sampleFoods = [
-        {
-            item_name: "Mixed Green Salad",
-            total_calories: 45,
-            total_protein: 3,
-            total_carbs: 8,
-            total_fats: 1.5
-        },
-        {
-            item_name: "Grilled Chicken Breast",
-            total_calories: 185,
-            total_protein: 35,
-            total_carbs: 0,
-            total_fats: 4
-        },
-        {
-            item_name: "Steamed Rice",
-            total_calories: 130,
-            total_protein: 3,
-            total_carbs: 28,
-            total_fats: 0.3
-        },
-        {
-            item_name: "Fresh Apple",
-            total_calories: 95,
-            total_protein: 0.5,
-            total_carbs: 25,
-            total_fats: 0.3
-        },
-        {
-            item_name: "Whole Wheat Bread",
-            total_calories: 80,
-            total_protein: 4,
-            total_carbs: 14,
-            total_fats: 1.1
-        }
-    ];
-    
-    // Randomly select 1-3 items
-    const numItems = Math.floor(Math.random() * 3) + 1;
-    const selectedItems = [];
-    
-    for (let i = 0; i < numItems; i++) {
-        const randomItem = sampleFoods[Math.floor(Math.random() * sampleFoods.length)];
-        selectedItems.push({
-            ...randomItem,
-            // Add some variation to make it more realistic
-            total_calories: Math.round(randomItem.total_calories * (0.8 + Math.random() * 0.4)),
-            total_protein: Math.round(randomItem.total_protein * (0.8 + Math.random() * 0.4) * 10) / 10,
-            total_carbs: Math.round(randomItem.total_carbs * (0.8 + Math.random() * 0.4) * 10) / 10,
-            total_fats: Math.round(randomItem.total_fats * (0.8 + Math.random() * 0.4) * 10) / 10
-        });
-    }
-    
-    return {
-        items: selectedItems
-    };
+    resultsGrid.innerHTML = `
+        <div class="calorie-card no-food-card">
+            <div class="card-header">
+                <span class="food-icon">🔍</span>
+                <span class="food-name">No Food Detected</span>
+            </div>
+            <div class="no-food-content">
+                <div class="no-food-icon">🍽️</div>
+                <p>We couldn't identify any food items in your image.</p>
+                <div class="suggestions">
+                    <h4>Tips for better results:</h4>
+                    <ul>
+                        <li>Make sure the food is clearly visible</li>
+                        <li>Use good lighting</li>
+                        <li>Take the photo from above or at an angle</li>
+                        <li>Ensure the image is not blurry</li>
+                    </ul>
+                </div>
+                <button onclick="clearResults()" class="retry-button">
+                    📸 Try Another Image
+                </button>
+            </div>
+        </div>
+    `;
 }
 
 // Display the results in cards
@@ -524,16 +480,9 @@ function displayResults(result) {
     
     resultsGrid.innerHTML = '';
 
-    if (!result || !result.items || result.items.length === 0) {
-        resultsGrid.innerHTML = `
-            <div class="calorie-card">
-                <div class="card-header">
-                    <span class="food-icon">❓</span>
-                    <span class="food-name">No Food Items Detected</span>
-                </div>
-                <p>Sorry, we couldn't identify any food items in your image. Please try with a clearer image.</p>
-            </div>
-        `;
+    // Check if no food was detected
+    if (!result || result.has_food === false || !result.items || result.items.length === 0) {
+        displayNoFoodDetected();
         return;
     }
 
