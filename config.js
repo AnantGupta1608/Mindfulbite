@@ -2,8 +2,8 @@
 
 
 const CONFIG = {
-  IMGBB_API_KEY: '8fb6c49d1ec7b148d7e626cbef3f6be7',
-  GROQ_API_KEY: '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',
+  IMGBB_API_KEY: '0536db87cc9bc37357c549a93ec3cf5a',
+  GROQ_API_KEY: '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',
 };
 window.CONFIG = CONFIG;
 
